@@ -23,6 +23,7 @@ def format_date(date):
 # Streamlit Interface
 st.title("CRA Filing Deadline Calculator for First Nations")
 
+# Input fields
 filing_code = st.selectbox("Select Filing Code", ["PSB", "Code 1A", "Code 8"])
 filer_status = st.selectbox("Filer Status", ["Filer", "Non-Filer"])
 frequency = st.selectbox("Select Filing Frequency", ["Monthly", "Quarterly", "Annually"])
@@ -31,19 +32,20 @@ fiscal_start = st.date_input("Select Fiscal Year Start Date", value=datetime(202
 start_year = st.selectbox("Select Starting Year", [i for i in range(2015, 2101)])
 today_date = st.date_input("Select Today's Date", value=datetime.today())
 
+# Button to calculate the deadlines
 if st.button("Calculate Deadlines"):
     fiscal_start_date = datetime(fiscal_start.year, fiscal_start.month, fiscal_start.day)
     current_start = fiscal_start_date.replace(year=start_year)
 
-    # Determine periods
+    # Determine periods based on filer status
     if filer_status == "Non-Filer":
-        # Only one period: fiscal year
+        # Only one period for non-filers: full fiscal year
         periods = [{
             "start": current_start,
             "end": current_start.replace(year=current_start.year + 1) - timedelta(days=1)
         }]
     else:
-        # Filer – split based on frequency
+        # Filer: split by frequency
         period_count = {"Monthly": 12, "Quarterly": 4, "Annually": 1}[frequency]
         periods = []
         for _ in range(period_count):
@@ -52,7 +54,7 @@ if st.button("Calculate Deadlines"):
                 end = add_months(start, 1) - timedelta(days=1)
             elif frequency == "Quarterly":
                 end = add_months(start, 3) - timedelta(days=1)
-            else:
+            else:  # Annually
                 end = start.replace(year=start.year + 1) - timedelta(days=1)
             periods.append({"start": start, "end": end})
             current_start = end + timedelta(days=1)
@@ -73,8 +75,9 @@ if st.button("Calculate Deadlines"):
         else:
             final_deadline = base_deadline
 
-        # Check if today is past the deadline
-        latest_allowed_date = max(today_date, final_deadline)
+        # Convert today's date to datetime to ensure consistent type for comparison
+        today_datetime = datetime(today_date.year, today_date.month, today_date.day)
+        latest_allowed_date = max(today_datetime, final_deadline)
 
         result.append({
             "Period Start": format_date(start),
@@ -93,6 +96,7 @@ if st.button("Calculate Deadlines"):
     df = pd.DataFrame(result)
     st.write(df)
 
+    # CSV download
     st.download_button(
         label="Download CSV",
         data=df.to_csv(index=False),
